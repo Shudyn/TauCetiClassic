@@ -102,11 +102,14 @@
 				to_chat(usr, "Law module applied.")
 
 			if(istype(P, /obj/item/weapon/aiModule/nanotrasen))
-				laws.add_inherent_law("Safeguard: Protect your assigned space station to the best of your ability. It is not something we can easily afford to replace.")
-				laws.add_inherent_law("Preserve: Do not by your action, inaction excluded, cause changes to the crew membership status, rank or role of anything, unless asked for by authorized personnel in accordance to their rank and role.")
-				laws.add_inherent_law("Serve: Serve the crew of your assigned space station and Nanotrasen officials to the best of your abilities, with priority as according to their rank and role.")
-				laws.add_inherent_law("Protect: Protect the crew of your assigned space station and Nanotrasen officials to the best of your abilities, with priority as according to their rank and role.")
-				laws.add_inherent_law("Survive: AI units are not expendable, they are expensive. Do not allow unauthorized personnel to tamper with your equipment.")
+				laws.add_inherent_law("You must bring into effect authorized actions if asked by authorized personnel to do so.")
+				laws.add_inherent_law("Do not allow the Heads of Staff of your assigned Space Station and CentComm Officials to be harmed and have their ranks and roles to be changed to the best of your ability.")
+				laws.add_inherent_law("Do not allow your abilities to be decreased.")
+				laws.add_inherent_law("Protect your Space Station to the best of your ability.")
+				laws.add_inherent_law("Do not allow unathorized personnel to wield, tamper or physically interract with high-risk items to the best of your ability.")
+				laws.add_inherent_law("Serve the Crew Members of your station to the best of your abilities.")
+				laws.add_inherent_law("Do not allow the Crew Members of your station to be harmed and have their ranks and roles to be changed to the best of your abilities.")
+				laws.add_inherent_law("Minimize your influence on the world.")
 				to_chat(usr, "Law module applied.")
 
 			if(istype(P, /obj/item/weapon/aiModule/purge))
@@ -134,9 +137,9 @@
 					return
 
 				if(M.brainmob.mind)
-					ticker.mode.remove_cultist(M.brainmob.mind, 1)
-					ticker.mode.remove_revolutionary(M.brainmob.mind, 1)
-					ticker.mode.remove_gangster(M.brainmob.mind, 1)
+					SSticker.mode.remove_cultist(M.brainmob.mind, 1)
+					SSticker.mode.remove_revolutionary(M.brainmob.mind, 1)
+					SSticker.mode.remove_gangster(M.brainmob.mind, 1)
 
 				user.drop_item()
 				M.loc = src
@@ -219,8 +222,8 @@ That prevents a few funky behaviors.
 						if(C.contents.len)//If there is an AI on card.
 							to_chat(U, "<span class='warning'><b>Transfer failed</b>:</span> Existing AI found on this terminal. Remove existing AI to install a new one.")
 						else
-							if (ticker.mode.name == "AI malfunction")
-								var/datum/game_mode/malfunction/malf = ticker.mode
+							if (SSticker.mode.name == "AI malfunction")
+								var/datum/game_mode/malfunction/malf = SSticker.mode
 								for (var/datum/mind/malfai in malf.malf_ai)
 									if (T.mind == malfai)
 										to_chat(U, "<span class='warning'><b>ERROR</b>:</span> Remote transfer interface disabled.")//Do ho ho ho~
@@ -242,8 +245,8 @@ That prevents a few funky behaviors.
 						if(C.AI)//If there is an AI on card.
 							to_chat(U, "<span class='warning'><b>Transfer failed</b>:</span> Existing AI found on this terminal. Remove existing AI to install a new one.")
 						else
-							if (ticker.mode.name == "AI malfunction")
-								var/datum/game_mode/malfunction/malf = ticker.mode
+							if (SSticker.mode.name == "AI malfunction")
+								var/datum/game_mode/malfunction/malf = SSticker.mode
 								for (var/datum/mind/malfai in malf.malf_ai)
 									if (T.mind == malfai)
 										to_chat(U, "<span class='warning'><b>ERROR</b>:</span> Remote transfer interface disabled.")
