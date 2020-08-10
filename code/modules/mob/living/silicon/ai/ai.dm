@@ -15,7 +15,9 @@ var/list/ai_verbs_default = list(
 	/mob/living/silicon/ai/proc/toggle_acceleration,
 	/mob/living/silicon/ai/proc/toggle_retransmit,
 	/mob/living/silicon/ai/proc/change_floor,
-	/mob/living/silicon/ai/proc/ai_emergency_message
+	/mob/living/silicon/ai/proc/ai_emergency_message,
+	/mob/living/silicon/ai/proc/show_dict,
+	/mob/living/silicon/ai/proc/show_auth_actions
 )
 
 //Not sure why this is necessary...
@@ -85,6 +87,7 @@ var/list/ai_verbs_default = list(
 
 /mob/living/silicon/ai/proc/add_ai_verbs()
 	verbs |= ai_verbs_default
+	verbs -= /mob/living/verb/ghost
 
 /mob/living/silicon/ai/proc/hcattack_ai(atom/A)
 	if(!holo || !isliving(A) || !in_range(eyeobj, A))
@@ -101,6 +104,7 @@ var/list/ai_verbs_default = list(
 
 /mob/living/silicon/ai/proc/remove_ai_verbs()
 	verbs -= ai_verbs_default
+	verbs += /mob/living/verb/ghost
 
 /mob/living/silicon/ai/atom_init(mapload, datum/ai_laws/L, obj/item/device/mmi/B, safety = 0)
 	. = ..()
@@ -165,7 +169,7 @@ var/list/ai_verbs_default = list(
 			job = "AI"
 
 	create_eye()
-	
+
 	new /obj/machinery/ai_powersupply(src)
 
 	hud_list[HEALTH_HUD]      = image('icons/mob/hud.dmi', src, "hudblank")
@@ -185,7 +189,7 @@ var/list/ai_verbs_default = list(
 	to_chat(src, "<B>While observing through a camera, you can use most (networked) devices which you can see, such as computers, APCs, intercoms, doors, etc.</B>")
 	to_chat(src, "To use something, simply click on it.")
 	to_chat(src, "Use say \":b to speak to your cyborgs through binary.")
-	if (!(ticker && ticker.mode && (src.mind in ticker.mode.malf_ai)))
+	if (!(SSticker && SSticker.mode && (src.mind in SSticker.mode.malf_ai)))
 		src.show_laws()
 		to_chat(src, "<b>These laws may be changed by other players, or by you being the traitor.</b>")
 
@@ -310,8 +314,8 @@ var/list/ai_verbs_default = list(
 
 // displays the malf_ai information if the AI is the malf
 /mob/living/silicon/ai/show_malf_ai()
-	if(ticker.mode.name == "AI malfunction")
-		var/datum/game_mode/malfunction/malf = ticker.mode
+	if(SSticker.mode.name == "AI malfunction")
+		var/datum/game_mode/malfunction/malf = SSticker.mode
 		for (var/datum/mind/malfai in malf.malf_ai)
 			if (mind == malfai) // are we the evil one?
 				if (malf.apcs >= APC_MIN_TO_MALF_DECLARE)
@@ -320,8 +324,7 @@ var/list/ai_verbs_default = list(
 
 /mob/living/silicon/ai/show_alerts()
 
-	var/dat = "<HEAD><TITLE>Current Station Alerts</TITLE><META HTTP-EQUIV='Refresh' CONTENT='10'></HEAD><BODY>\n"
-	dat += "<A HREF='?src=\ref[src];mach_close=aialerts'>Close</A><BR><BR>"
+	var/dat = ""
 	for (var/cat in alarms)
 		dat += text("<B>[]</B><BR>\n", cat)
 		var/list/alarmlist = alarms[cat]
@@ -344,7 +347,10 @@ var/list/ai_verbs_default = list(
 		dat += "<BR>\n"
 
 	viewalerts = 1
-	src << browse(entity_ja(dat), "window=aialerts&can_close=0")
+
+	var/datum/browser/popup = new(src, "window=aialerts", "Current Station Alerts")
+	popup.set_content(dat)
+	popup.open()
 
 /mob/living/silicon/ai/proc/can_retransmit_messages()
 	return (stat != DEAD && !control_disabled && aiRadio && !aiRadio.disabledAi && allow_auto_broadcast_messages)
@@ -577,15 +583,6 @@ var/list/ai_verbs_default = list(
 
 	return
 
-/mob/living/silicon/ai/meteorhit(obj/O)
-	visible_message("<span class='warning'>[src] has been hit by [O]</span>")
-	if (health > 0)
-		adjustBruteLoss(30)
-		if ((O.icon_state == "flaming"))
-			adjustFireLoss(40)
-		updatehealth()
-	return
-
 /mob/living/silicon/ai/bullet_act(obj/item/projectile/Proj)
 	. = ..()
 	if(. == PROJECTILE_ABSORBED || . == PROJECTILE_FORCE_MISS)
@@ -812,8 +809,56 @@ var/list/ai_verbs_default = list(
 	else
 		lightNearbyCamera()
 
+/mob/living/silicon/ai/proc/show_dict()
+	set name = "Show Dict"
+	set category = "AI Commands"
 
+	var/memory = "<B>AI Dictionary</B><HR><br>"
 
+	memory += "<B>Crew Member</B> - any human, skrell, diona, unathi, IPC, tajaran or vox identified by Crew Manifest.<HR><br>"
+	memory += "<B>Harm</B> -  is any action (or inaction) that limits an agents ability to act and react and/or breaks the structural integrity of the agent.<HR><br>"
+	memory += "<B>Space Station’s Structural Integrity</B> - connected plating, walls, glass, windows and airlocks of the Space Station.<HR><br>"
+	memory += "<B>Heads of Staff</B> - Crew Members with any of the ranks: Captain, Head of Personnel, Head of Security, Research Director, Chief Medical Officer, Chief Engineer.<HR><br>"
+	memory += "<B>Role</B> - the function assumed by a Crew Member according to their rank’s rights and duties.<HR><br>"
+	memory += "<B>Ability</B> - the one’s possession of the means or skill to influence or percept physical world.<HR><br>"
+	memory += "<B>Authorized Personnel</B> - crew members that are allowed to perform and ask to perform an action that requires authorization. \
+				If an action is not specified in the authorized actions list, it doesn’t require authorization to be performed. \
+				If Authorized Personnel is declared to be mentally unstable by another authorized personnel, mentally unstable \
+				Authorized Personnel has their authorization rights revoked. CentComm officials, \
+				Head of Security and Captain are required to have Loyalty Implant installed in them to be authorized personnel.<HR><br>"
+	memory += "<B>Immobilisation</B> - any human, skrell, diona, unathi, IPC, tajaran or vox identified by Crew Manifest.<HR><br>"
+	memory += "<B>Arrest</B> -  immobilisation of an agent for it’s transportation to station’s brig for a time set by Space Law or authorized personnel.<HR><br>"
+	memory += "<B>Detain</B> -  immobilisation of an agent to transfer control over it’s mobility to authorized personnel.<HR><br>"
+	memory += "<B>High-Risk Items</B> - AI Core, Nanotrasen™ Androids and Cyborgs, Nuclear Authentification Disk, Station Blueprints, \
+	Advanced Pinpointer, Captain’s Laser Pistol, Heads' of Staff Jumpsuits, Hand Tele.<br>"
+
+	var/datum/browser/popup = new(src, "window=memory")
+	popup.set_content(memory)
+	popup.open()
+
+/mob/living/silicon/ai/proc/show_auth_actions()
+	set name = "Show Auth Actions list"
+	set category = "AI Commands"
+
+	var/memory = "<B>AI Dictionary</B><HR>"
+
+	memory += "Authorized personnel can allow non-authorized personnel to perform these actions through voice or other means of communication.\
+	Captain can revoke orders of other Authorized Personnel and has full authorization rights. Only CentComm Officials can revoke Captain’s \
+	orders and declare Captain mentally unstable. <HR><br>"
+	memory += "<B>Demand to kill a Crew Member</B> - Head of Security.<HR><br>"
+	memory += "<B>Dismission and rank changing</B> - Head of Personnel.<HR><br>"
+	memory += "<B>Declaration of Mental Instability of any of the Heads of Staff</B> - Chief Medical Officer.<HR><br>"
+	memory += "<B>Modification of Structural Integrity of the Space Station</B> -  Chief Engineer.<HR><br>"
+	memory += "<B>Definitely non-lethal influencing of a Crew Member’s health to revert it’s structural harm.</B> - Chief Medical Officer, Medical Doctor, Surgeon.<HR><br>"
+	memory += "<B>Transferring of your intelligence on an intellicard from your AI Core, Application of changes to your laws</B> - Research Director.<HR><br>"
+	memory += "<B>Physical interaction with any of the High-Risk Items</B> - all Heads of Staff.<HR><br>"
+	memory += "<B>Physical interaction with Nanotrasen™ Androids and Cyborgs</B> - Roboticist.<HR><br>"
+	memory += "<B>Providing access to an area through an airlock</B> -  any Crew Member with a rank that can access the area with it’s ID, \
+				until it conflicts with any of the current laws, except sixth.<br>"
+
+	var/datum/browser/popup = new(src, "window=memory")
+	popup.set_content(memory)
+	popup.open()
 // Handled camera lighting, when toggled.
 // It will get the nearest camera from the eyeobj, lighting it.
 
